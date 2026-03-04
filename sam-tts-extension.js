@@ -1,6 +1,3 @@
-// SAM TTS TurboWarp Extension
-// Requires sam-js loaded globally
-
 (function (Scratch) {
     'use strict';
 
@@ -11,15 +8,11 @@
     class SamTTSExtension {
 
         constructor() {
-            this.sam = new SamJs();
-
-            // default values (0–255 range for SAM)
+            this.sam = null;
             this.pitch = 50;
             this.speed = 72;
             this.mouth = 128;
             this.throat = 128;
-
-            this.currentAudio = null;
         }
 
         getInfo() {
@@ -27,11 +20,6 @@
                 id: 'samtts',
                 name: 'SAM TTS',
                 blocks: [
-                    {
-                        opcode: 'speakHello',
-                        blockType: Scratch.BlockType.COMMAND,
-                        text: 'Speak hello world!'
-                    },
                     {
                         opcode: 'speakText',
                         blockType: Scratch.BlockType.COMMAND,
@@ -48,9 +36,7 @@
                         blockType: Scratch.BlockType.COMMAND,
                         text: 'Stop speaking'
                     },
-
                     "--- Voice Settings ---",
-
                     {
                         opcode: 'setPitch',
                         blockType: Scratch.BlockType.COMMAND,
@@ -69,7 +55,7 @@
                         arguments: {
                             VALUE: {
                                 type: Scratch.ArgumentType.NUMBER,
-                                defaultValue: 50
+                                defaultValue: 72
                             }
                         }
                     },
@@ -80,7 +66,7 @@
                         arguments: {
                             VALUE: {
                                 type: Scratch.ArgumentType.NUMBER,
-                                defaultValue: 50
+                                defaultValue: 128
                             }
                         }
                     },
@@ -91,12 +77,25 @@
                         arguments: {
                             VALUE: {
                                 type: Scratch.ArgumentType.NUMBER,
-                                defaultValue: 50
+                                defaultValue: 128
                             }
                         }
                     }
                 ]
             };
+        }
+
+        async loadSAM() {
+            if (this.sam) return;
+
+            await new Promise((resolve) => {
+                const script = document.createElement("script");
+                script.src = "https://unpkg.com/sam-js/dist/sam.js";
+                script.onload = resolve;
+                document.head.appendChild(script);
+            });
+
+            this.sam = new SamJs();
         }
 
         applySettings() {
@@ -106,25 +105,17 @@
             this.sam.throat = this.throat;
         }
 
-        async speakHello() {
-            await this.speakText({ TEXT: "hello world!" });
-        }
-
         async speakText(args) {
+            await this.loadSAM();
             this.applySettings();
-
-            // stop previous audio
-            this.stopSpeech();
-
-            // speak returns a Promise
             await this.sam.speak(args.TEXT);
         }
 
         stopSpeech() {
-            // sam-js uses WebAudio internally,
-            // easiest stop = recreate instance
-            this.sam = new SamJs();
-            this.applySettings();
+            if (this.sam) {
+                this.sam = new SamJs(); // reset instance
+                this.applySettings();
+            }
         }
 
         setPitch(args) {
